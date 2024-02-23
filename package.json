@@ -5,6 +5,11 @@
   "main": "lib/index.js",
   "unpkg": "dist/index.umd.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "lib",
+    "src"
+  ],
   "scripts": {
     "test": "jest",
     "clean": "rimraf dist",
