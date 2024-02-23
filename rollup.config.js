@@ -25,10 +25,6 @@ export default isProduction
             .join(''),
           file: pkg.unpkg,
           sourcemap: true,
-          globals: {
-            'data-transport': 'DataTransport',
-            'broadcast-channel': 'BroadcastChannel',
-          },
         },
       ],
       plugins: [
@@ -40,7 +36,6 @@ export default isProduction
         }),
         terser(),
       ],
-      external: ['data-transport', 'broadcast-channel'],
     }
   : {
       input,
@@ -60,5 +55,4 @@ export default isProduction
           preventAssignment: true,
         }),
       ],
-      external: ['data-transport', 'broadcast-channel'],
     };
