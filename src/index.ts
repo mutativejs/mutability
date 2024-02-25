@@ -10,3 +10,5 @@ export const mutate = <T>(baseState: T, recipe: (state: T) => void) => {
   });
   apply(baseState, patches);
 };
+
+export default mutate;
