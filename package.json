@@ -1,6 +1,6 @@
 {
   "name": "mutability",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A JavaScript library for transactional mutable updates",
   "main": "lib/index.cjs.js",
   "unpkg": "dist/index.umd.js",
