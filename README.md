@@ -12,7 +12,7 @@ When we want to perform transactional updates on a mutable object, if an error i
 ## Installation
 
 ```sh
-yarn add mutability
+yarn add mutability mutative
 ```
 
 ## Usage
