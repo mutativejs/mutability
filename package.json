@@ -20,18 +20,19 @@
     "clean": "rimraf dist",
     "build": "yarn clean && tsc --skipLibCheck && yarn build:prod",
     "build:prod": "NODE_ENV=production rollup --config --bundleConfigAsCjs",
+    "build:doc": "typedoc --plugin typedoc-plugin-markdown --out docs src/index.ts",
     "commit": "yarn git-cz"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/unadlib/mutability.git"
+    "url": "git+https://github.com/mutativejs/mutability.git"
   },
   "author": "unadlib",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/unadlib/mutability/issues"
+    "url": "https://github.com/mutativejs/mutability/issues"
   },
-  "homepage": "https://github.com/unadlib/mutability#readme",
+  "homepage": "https://github.com/mutativejs/mutability#readme",
   "keywords": [
     "transactional mutable updates",
     "transactional updates",

@@ -1,10 +1,10 @@
-# Mutability
+# mutability
 
-![Node CI](https://github.com/unadlib/mutability/workflows/Node%20CI/badge.svg)
+![Node CI](https://github.com/mutativejs/mutability/workflows/Node%20CI/badge.svg)
 [![npm version](https://badge.fury.io/js/mutability.svg)](http://badge.fury.io/js/mutability)
-![license](https://img.shields.io/npm/l/use-mutative)
+![license](https://img.shields.io/npm/l/mutability)
 
-A JavaScript library for transactional mutable updates
+A JavaScript library for transactional mutable updates.
 
 ## Motivation
 
@@ -70,4 +70,4 @@ test('base - mutate with error', () => {
 
 ## License
 
-Mutability is [MIT licensed](https://github.com/unadlib/mutability/blob/main/LICENSE).
+Mutability is [MIT licensed](https://github.com/mutativejs/mutability/blob/main/LICENSE).
