@@ -1,6 +1,6 @@
 {
   "name": "mutability",
-  "version": "0.3.2",
+  "version": "1.0.0",
   "description": "A JavaScript library for transactional mutable updates",
   "main": "dist/index.cjs.js",
   "unpkg": "dist/index.umd.js",
@@ -34,9 +34,11 @@
   },
   "homepage": "https://github.com/mutativejs/mutability#readme",
   "keywords": [
+    "transaction",
     "transactional mutable updates",
     "transactional updates",
-    "mutative"
+    "mutative",
+    "transactional"
   ],
   "devDependencies": {
     "@rollup/plugin-commonjs": "^24.0.1",
