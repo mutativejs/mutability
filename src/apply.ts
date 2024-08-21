@@ -1,6 +1,9 @@
 import { DraftType, Operation, Patches } from './interface';
 import { deepClone, get, getType, unescapePath } from './utils';
 
+/**
+ * Apply patches to the state.
+ */
 export function apply(state: any, patches: Patches) {
   let i;
   for (i = patches.length - 1; i >= 0; i -= 1) {

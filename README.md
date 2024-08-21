@@ -68,6 +68,14 @@ test('base - mutate with error', () => {
 });
 ```
 
+## APIs
+
+### `mutate()`
+Mutate the mutable object
+
+### `apply()`
+Apply the mutable update with patches
+
 ## License
 
 Mutability is [MIT licensed](https://github.com/mutativejs/mutability/blob/main/LICENSE).
