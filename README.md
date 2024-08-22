@@ -4,7 +4,7 @@
 [![npm version](https://badge.fury.io/js/mutability.svg)](http://badge.fury.io/js/mutability)
 ![license](https://img.shields.io/npm/l/mutability)
 
-A JavaScript library for transactional mutable updates.
+A JavaScript library for transactional mutable updates based on [Mutative](https://github.com/unadlib/mutative).
 
 ## Motivation
 
