@@ -33,10 +33,28 @@ test('base - mutate', () => {
       c: 1,
     },
   };
-  mutate(baseState, (draft) => {
+  const { patches, inversePatches } = mutate(baseState, (draft) => {
     draft.a.c = 2;
   });
   expect(baseState).toEqual({ a: { c: 2 } });
+  expect({ patches, inversePatches }).toEqual({
+    patches: [
+      {
+        op: 'replace',
+        path: ['a', 'c'],
+        value: 2,
+      },
+    ],
+    inversePatches: [
+      {
+        op: 'replace',
+        path: ['a', 'c'],
+        value: 1,
+      },
+    ],
+  });
+  apply(baseState, inversePatches);
+  expect(baseState).toEqual({ a: { c: 1 } });
 });
 
 test('base - mutate with error', () => {
