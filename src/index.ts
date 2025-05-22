@@ -1,15 +1,19 @@
-import { create } from 'mutative';
-import { apply } from './apply';
-
-export { apply } from './apply';
+import { create, apply as baseApply, Patches } from 'mutative';
 
 /**
  * Transactional updates to the base state with the recipe.
  */
-export const mutate = <T>(baseState: T, recipe: (state: T) => void) => {
+export const mutate = <T extends object>(
+  baseState: T,
+  recipe: (state: T) => void
+) => {
   const [, patches, inversePatches] = create(baseState, recipe, {
     enablePatches: true,
   });
-  apply(baseState, patches);
+  baseApply(baseState, patches, { mutable: true });
   return { inversePatches, patches };
+};
+
+export const apply = <T extends object>(baseState: T, patches: Patches) => {
+  baseApply(baseState, patches, { mutable: true });
 };
