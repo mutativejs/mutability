@@ -1,4 +1,4 @@
-import { create, apply as baseApply, Patches } from 'mutative';
+import { create, apply as baseApply, type Patches } from 'mutative';
 
 /**
  * Transactional updates to the base state with the recipe.

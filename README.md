@@ -89,9 +89,11 @@ test('base - mutate with error', () => {
 ## APIs
 
 ### `mutate()`
+
 Mutate the mutable object, and return the patches and inverse patches.
 
 ### `apply()`
+
 Apply the mutable update with patches.
 
 ## License
