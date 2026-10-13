@@ -469,3 +469,15 @@ test('apply - a patch removes the Set item that equals its value', () => {
     [{ x: 1 }, { x: 1 }],
   ]);
 });
+
+test('apply - patches after a root replacement with the state itself', () => {
+  const baseState = { tags: new Set([{ name: 'a' }]) };
+  const { inversePatches } = mutate(baseState, (draft) => {
+    draft.tags.add({ name: 'b' });
+  });
+  apply(baseState, [
+    { op: 'replace', path: [], value: baseState },
+    ...inversePatches,
+  ]);
+  expect(Array.from(baseState.tags)).toEqual([{ name: 'a' }]);
+});

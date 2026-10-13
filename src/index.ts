@@ -219,12 +219,17 @@ const isRootReplacement = ({ op, path }: Patch) =>
  * the patches that add items to a Set or remove them are applied here, to
  * keep the items and their order through undo and redo.
  */
-const applyInPlace = (state: object, patches: Patches) => {
-  if (patches.some(isRootReplacement)) {
+const applyInPlace = (state: object, allPatches: Patches) => {
+  // As apply() does, apply the patches after the last one that replaces the
+  // root state, which can only replace it with the state itself.
+  let start = allPatches.length - 1;
+  while (start >= 0 && !isRootReplacement(allPatches[start])) start -= 1;
+  if (start >= 0 && allPatches[start].value !== state) {
     // apply() throws for a new root state before it changes the state.
-    baseApply(state, patches, { mutable: true });
+    baseApply(state, allPatches, { mutable: true });
     return;
   }
+  const patches = allPatches.slice(start + 1);
   // The patches that apply() applies together, until a patch may change a Set.
   let pending: Patches = [];
   const applyPending = () => {
