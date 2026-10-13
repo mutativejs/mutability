@@ -20,7 +20,7 @@ jobs:
           node-version: '24.x'
           # A job that publishes does not restore a cache that other jobs wrote.
           package-manager-cache: false
-      - run: yarn
+      - run: yarn install --frozen-lockfile
       - run: yarn build
       - run: yarn test
       - run: yarn test:production
