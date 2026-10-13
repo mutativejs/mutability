@@ -207,3 +207,32 @@ describe('mutate - array methods', () => {
     expect(baseState.jobs.slice(0, 3)).toEqual(createJobs().slice(1));
   });
 });
+
+describe('mutate - fixes of Mutative 2', () => {
+  test('a change below an object key of a Map applies to that key', () => {
+    const owner = { id: 1 };
+    const baseState = { tasks: new Map([[owner, { done: false }]]) };
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      draft.tasks.get(owner)!.done = true;
+    });
+    expect(patches).toEqual([
+      { op: 'replace', path: ['tasks', owner, 'done'], value: true },
+    ]);
+    expect(patches[0].path[1]).toBe(owner);
+    expect(baseState.tasks.get(owner)).toEqual({ done: true });
+    apply(baseState, inversePatches);
+    expect(baseState.tasks.get(owner)).toEqual({ done: false });
+  });
+
+  test('array patches keep the sign of zero', () => {
+    const baseState = { values: [0] };
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      draft.values[0] = -0;
+    });
+    expect(Object.is(baseState.values[0], -0)).toBe(true);
+    apply(baseState, inversePatches);
+    expect(Object.is(baseState.values[0], 0)).toBe(true);
+    apply(baseState, patches);
+    expect(Object.is(baseState.values[0], -0)).toBe(true);
+  });
+});
