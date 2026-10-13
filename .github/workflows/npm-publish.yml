@@ -10,16 +10,15 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v3
+      # npm publishes with trusted publishing (OIDC) from npm 11.5.1, which
+      # Node.js 24 includes, to its default registry and with provenance. A
+      # registry-url would add a token setting to .npmrc that Yarn 1 cannot
+      # read without NODE_AUTH_TOKEN.
       - uses: actions/setup-node@v3
         with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: '24.x'
       - run: yarn
       - run: yarn build
       - run: yarn test
       - run: yarn test:production
-      - run: npm publish --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
-          CI: true
-
+      - run: npm publish
