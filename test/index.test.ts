@@ -255,3 +255,95 @@ describe('mutate - fixes of Mutative 2', () => {
     expect(Object.is(baseState.values[0], -0)).toBe(true);
   });
 });
+
+describe('mutate - Sets of objects', () => {
+  type Tag = { name: string };
+  const getNames = (tags: Set<Tag>) => Array.from(tags, ({ name }) => name);
+
+  test('inverse patches remove the objects that patches added', () => {
+    const baseState = { tags: new Set<Tag>([{ name: 'a' }]) };
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      draft.tags.add({ name: 'b' });
+    });
+    expect(getNames(baseState.tags)).toEqual(['a', 'b']);
+    apply(baseState, inversePatches);
+    expect(getNames(baseState.tags)).toEqual(['a']);
+    apply(baseState, patches);
+    expect(getNames(baseState.tags)).toEqual(['a', 'b']);
+    apply(baseState, inversePatches);
+    expect(getNames(baseState.tags)).toEqual(['a']);
+  });
+
+  test('inverse patches add the removed objects back at their positions', () => {
+    const baseState = {
+      tags: new Set<Tag>([{ name: 'a' }, { name: 'b' }, { name: 'c' }]),
+    };
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      Array.from(draft.tags)
+        .filter(({ name }) => name !== 'b')
+        .forEach((tag) => draft.tags.delete(tag));
+    });
+    expect(getNames(baseState.tags)).toEqual(['b']);
+    apply(baseState, inversePatches);
+    expect(getNames(baseState.tags)).toEqual(['a', 'b', 'c']);
+    apply(baseState, patches);
+    expect(getNames(baseState.tags)).toEqual(['b']);
+    apply(baseState, inversePatches);
+    expect(getNames(baseState.tags)).toEqual(['a', 'b', 'c']);
+  });
+
+  test('a changed item keeps its position when the Set also adds an item', () => {
+    const baseState = {
+      workers: new Set([
+        { name: 'a', jobs: 0 },
+        { name: 'b', jobs: 0 },
+        { name: 'c', jobs: 0 },
+      ]),
+    };
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      for (const worker of draft.workers) {
+        if (worker.name === 'b') worker.jobs += 1;
+      }
+      draft.workers.add({ name: 'd', jobs: 0 });
+    });
+    const nextWorkers = [
+      { name: 'a', jobs: 0 },
+      { name: 'b', jobs: 1 },
+      { name: 'c', jobs: 0 },
+      { name: 'd', jobs: 0 },
+    ];
+    expect(Array.from(baseState.workers)).toEqual(nextWorkers);
+    apply(baseState, inversePatches);
+    expect(Array.from(baseState.workers)).toEqual(
+      nextWorkers.slice(0, 3).map((worker) => ({ ...worker, jobs: 0 }))
+    );
+    apply(baseState, patches);
+    expect(Array.from(baseState.workers)).toEqual(nextWorkers);
+  });
+
+  test('patches of earlier updates address the same items after an undo', () => {
+    const baseState = {
+      workers: new Set([
+        { name: 'a', jobs: 0 },
+        { name: 'b', jobs: 0 },
+      ]),
+    };
+    const first = mutate(baseState, (draft) => {
+      for (const worker of draft.workers) {
+        if (worker.name === 'b') worker.jobs += 1;
+      }
+    });
+    const second = mutate(baseState, (draft) => {
+      for (const worker of draft.workers) {
+        if (worker.name === 'a') draft.workers.delete(worker);
+      }
+    });
+    expect(Array.from(baseState.workers)).toEqual([{ name: 'b', jobs: 1 }]);
+    apply(baseState, second.inversePatches);
+    apply(baseState, first.inversePatches);
+    expect(Array.from(baseState.workers)).toEqual([
+      { name: 'a', jobs: 0 },
+      { name: 'b', jobs: 0 },
+    ]);
+  });
+});

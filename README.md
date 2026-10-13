@@ -103,7 +103,7 @@ Apply the patches to the mutable object in place, for example the inverse patche
 ## Notes
 
 - `apply()` copies the patch values that it adds to the mutable object, also when `mutate()` applies them. So an object that the recipe moves, for example with `sort()`, is a copy in the mutable object.
-- `apply()` removes an item from a Set by identity, so inverse patches cannot remove an object that a patch added to a Set, as the Set holds a copy of it. To undo such updates, use a Map keyed by an id, or an array.
+- As a Set holds a copy of an object that a patch added, `apply()` removes the item that equals the value of a patch, and adds an item at the position that its patch records, so that undo and redo keep the items of a Set and their order.
 
 ## Upgrading to Mutative 2
 
