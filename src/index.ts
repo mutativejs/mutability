@@ -11,12 +11,15 @@ const copy = <T>(value: T): T => {
 
 /**
  * Transactional updates to the base state with the recipe.
+ *
+ * Return the patches of the update, whose values are copies, and the inverse
+ * patches that undo it. If the recipe throws, the base state stays unchanged.
  */
 export const mutate = <T extends object>(
   baseState: T,
   recipe: (state: T) => void
 ) => {
-  const [, patches, inversePatches] = create(baseState, recipe, {
+  const [, appliedPatches, inversePatches] = create(baseState, recipe, {
     enablePatches: true,
   });
   // A patch value holds the objects of the next state, which shares the
@@ -24,15 +27,18 @@ export const mutate = <T extends object>(
   // so that later updates of the base state in place do not change the patches.
   // The inverse patches hold the values that the patches replace or remove,
   // which leave the base state.
-  const returnedPatches: Patches<true> = patches.map((patch) =>
+  const patches: Patches<true> = appliedPatches.map((patch) =>
     typeof patch.value === 'object' && patch.value !== null
       ? { ...patch, value: copy(patch.value) }
       : patch
   );
-  baseApply(baseState, patches, { mutable: true });
-  return { inversePatches, patches: returnedPatches };
+  baseApply(baseState, appliedPatches, { mutable: true });
+  return { inversePatches, patches };
 };
 
+/**
+ * Apply the patches to the base state in place.
+ */
 export const apply = <T extends object>(baseState: T, patches: Patches) => {
   baseApply(baseState, patches, { mutable: true });
 };
