@@ -450,3 +450,22 @@ describe('mutate - sparse arrays', () => {
     expect(baseState.list).toStrictEqual([1, undefined, 3]);
   });
 });
+
+test('apply - a patch removes the Set item that equals its value', () => {
+  const baseState = {
+    groups: new Set([
+      new Set([{ x: 1 }, { x: 1 }]),
+      new Set([{ x: 1 }, { x: 2 }]),
+    ]),
+  };
+  apply(baseState, [
+    {
+      op: 'remove',
+      path: ['groups', 0],
+      value: new Set([{ x: 1 }, { x: 2 }]),
+    },
+  ]);
+  expect(Array.from(baseState.groups, (group) => Array.from(group))).toEqual([
+    [{ x: 1 }, { x: 1 }],
+  ]);
+});

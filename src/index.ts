@@ -45,12 +45,16 @@ const isEqual = (value: unknown, other: unknown): boolean => {
   }
   if (value instanceof Set) {
     if (!(other instanceof Set) || value.size !== other.size) return false;
+    // Match each item with an item of the other Set that no item matched yet.
     const otherItems = Array.from(other);
-    return Array.from(value).every(
-      (item) =>
-        other.has(item) ||
-        otherItems.some((otherItem) => isEqual(item, otherItem))
-    );
+    return Array.from(value).every((item) => {
+      const index = otherItems.findIndex((otherItem) =>
+        isEqual(item, otherItem)
+      );
+      if (index < 0) return false;
+      otherItems.splice(index, 1);
+      return true;
+    });
   }
   if (
     other instanceof Map ||
