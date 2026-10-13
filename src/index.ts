@@ -99,6 +99,24 @@ const getParent = (state: object, patch: Patch) =>
   getPath(patch).slice(0, -1).reduce(read, state);
 
 /**
+ * Leave out the value of a patch that sets an array element to `undefined`
+ * where the array of the state is empty, as a patch without a value makes a
+ * hole in an array.
+ */
+const markHoles = (patches: Patches<true>, state: object): Patches<true> =>
+  patches.map((patch) => {
+    if (patch.op === 'remove' || patch.value !== undefined) return patch;
+    const parent = getParent(state, patch);
+    const index = patch.path[patch.path.length - 1];
+    return Array.isArray(parent) &&
+      typeof index === 'number' &&
+      index < parent.length &&
+      !(index in parent)
+      ? { op: patch.op, path: patch.path }
+      : patch;
+  });
+
+/**
  * Remove the item that is the value from the Set, or else the first item that
  * equals it, as the Set holds a copy of a value that a patch added.
  */
@@ -166,15 +184,23 @@ const applyInPlace = (state: object, patches: Patches) => {
   };
   for (let index = 0; index < patches.length; index += 1) {
     const patch = patches[index];
+    const isHole = patch.op !== 'remove' && !('value' in patch);
     let parent: unknown;
     // Only an `add` or a `remove` patch changes the items of a Set, which the
     // patch finds once the patches before it are applied.
-    if (patch.op === 'add' || patch.op === 'remove') {
+    if (patch.op === 'add' || patch.op === 'remove' || isHole) {
       applyPending();
       parent = getParent(state, patch);
     }
     if (!(parent instanceof Set)) {
       pending.push(patch);
+      if (isHole && Array.isArray(parent)) {
+        // apply() sets the element to `undefined`, which the hole replaces.
+        applyPending();
+        const path = getPath(patch);
+        const key = Number(path[path.length - 1]);
+        if (Number.isInteger(key)) delete parent[key];
+      }
     } else if (patch.op === 'remove') {
       removeItem(parent, patch.value);
     } else {
@@ -204,16 +230,19 @@ export const mutate = <T extends object>(
   baseState: T,
   recipe: (state: T) => void
 ) => {
-  const [, appliedPatches, inversePatches] = create(baseState, recipe, {
+  const [nextState, patches, inversePatches] = create(baseState, recipe, {
     enablePatches: true,
   });
+  // A patch value cannot tell an empty array element from `undefined`.
+  const appliedPatches = markHoles(patches, nextState);
+  const appliedInversePatches = markHoles(inversePatches, baseState);
   // A patch value holds objects of the next state, which shares the objects
   // that the recipe did not change with the base state, and an inverse patch
   // value holds objects of the base state, which a patch of a nested draft
   // changes in place before a patch of its parent replaces them. Return
   // copies, so that no update of the base state in place changes the patches.
   const result = {
-    inversePatches: copyValues(inversePatches),
+    inversePatches: copyValues(appliedInversePatches),
     patches: copyValues(appliedPatches),
   };
   applyInPlace(baseState, appliedPatches);

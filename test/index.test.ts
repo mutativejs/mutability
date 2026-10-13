@@ -347,3 +347,60 @@ describe('mutate - Sets of objects', () => {
     ]);
   });
 });
+
+describe('mutate - sparse arrays', () => {
+  test('patches keep the holes that a longer length makes', () => {
+    const baseState = { list: [1, 2, 3] };
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      draft.list.length = 5;
+    });
+    expect(baseState.list).toHaveLength(5);
+    expect(Object.keys(baseState.list)).toEqual(['0', '1', '2']);
+    apply(baseState, inversePatches);
+    expect(baseState.list).toStrictEqual([1, 2, 3]);
+    apply(baseState, patches);
+    expect(baseState.list).toHaveLength(5);
+    expect(Object.keys(baseState.list)).toEqual(['0', '1', '2']);
+  });
+
+  test('patches keep the holes of an array that shrinks and grows again', () => {
+    const baseState = { list: [1, 2, 3] };
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      draft.list.length = 1;
+      draft.list.length = 3;
+    });
+    expect(baseState.list).toHaveLength(3);
+    expect(Object.keys(baseState.list)).toEqual(['0']);
+    apply(baseState, inversePatches);
+    expect(baseState.list).toStrictEqual([1, 2, 3]);
+    apply(baseState, patches);
+    expect(baseState.list).toHaveLength(3);
+    expect(Object.keys(baseState.list)).toEqual(['0']);
+  });
+
+  test('inverse patches restore a hole that the recipe filled', () => {
+    const list = [1, 2, 3];
+    delete list[1];
+    const baseState = { list };
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      draft.list[1] = 2;
+    });
+    expect(baseState.list).toStrictEqual([1, 2, 3]);
+    apply(baseState, inversePatches);
+    expect(baseState.list).toHaveLength(3);
+    expect(Object.keys(baseState.list)).toEqual(['0', '2']);
+    apply(baseState, patches);
+    expect(baseState.list).toStrictEqual([1, 2, 3]);
+  });
+
+  test('patches keep an element that the recipe sets to undefined', () => {
+    const baseState = { list: [1, 2, 3] as (number | undefined)[] };
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      draft.list[1] = undefined;
+    });
+    expect(Object.keys(baseState.list)).toEqual(['0', '1', '2']);
+    apply(baseState, inversePatches);
+    apply(baseState, patches);
+    expect(baseState.list).toStrictEqual([1, undefined, 3]);
+  });
+});
