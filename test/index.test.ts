@@ -129,3 +129,81 @@ test('apply - a patch that replaces the root state throws', () => {
   ).toThrow();
   expect(baseState).toEqual({ a: { c: 1 } });
 });
+
+describe('mutate - array methods', () => {
+  type Job = { id: number; attempts: number };
+  const createJobs = () => [0, 1, 2, 3].map((id): Job => ({ id, attempts: 0 }));
+  const recipes: [string, (jobs: Job[]) => void, number[]][] = [
+    [
+      'shift()',
+      (jobs) => {
+        jobs.shift();
+      },
+      [1, 2, 3],
+    ],
+    [
+      'unshift()',
+      (jobs) => {
+        jobs.unshift({ id: 4, attempts: 0 });
+      },
+      [4, 0, 1, 2, 3],
+    ],
+    [
+      'splice()',
+      (jobs) => {
+        jobs.splice(1, 2, { id: 4, attempts: 0 });
+      },
+      [0, 4, 3],
+    ],
+    [
+      'reverse()',
+      (jobs) => {
+        jobs.reverse();
+      },
+      [3, 2, 1, 0],
+    ],
+    [
+      'sort()',
+      (jobs) => {
+        jobs.sort((a, b) => b.id - a.id);
+      },
+      [3, 2, 1, 0],
+    ],
+    [
+      'shift() and push()',
+      (jobs) => {
+        const job = jobs.shift()!;
+        job.attempts += 1;
+        jobs.push(job);
+      },
+      [1, 2, 3, 0],
+    ],
+  ];
+
+  test.each(recipes)(
+    '%s: the patches replay in both directions',
+    (_, recipe, ids) => {
+      const baseState = { jobs: createJobs() };
+      const { patches, inversePatches } = mutate(baseState, (draft) => {
+        recipe(draft.jobs);
+      });
+      const nextState = { jobs: baseState.jobs.map((job) => ({ ...job })) };
+      expect(nextState.jobs.map(({ id }) => id)).toEqual(ids);
+      apply(baseState, inversePatches);
+      expect(baseState).toEqual({ jobs: createJobs() });
+      apply(baseState, patches);
+      expect(baseState).toEqual(nextState);
+    }
+  );
+
+  test('the moved job keeps its change', () => {
+    const baseState = { jobs: createJobs() };
+    mutate(baseState, (draft) => {
+      const job = draft.jobs.shift()!;
+      job.attempts += 1;
+      draft.jobs.push(job);
+    });
+    expect(baseState.jobs[3]).toEqual({ id: 0, attempts: 1 });
+    expect(baseState.jobs.slice(0, 3)).toEqual(createJobs().slice(1));
+  });
+});
