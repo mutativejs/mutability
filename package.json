@@ -17,6 +17,7 @@
   ],
   "scripts": {
     "test": "jest",
+    "test:production": "NODE_ENV=production jest",
     "clean": "rimraf dist",
     "build": "yarn clean && tsc --skipLibCheck && yarn build:prod",
     "build:prod": "NODE_ENV=production rollup --config --bundleConfigAsCjs",
