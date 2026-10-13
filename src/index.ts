@@ -107,25 +107,68 @@ const read = (target: unknown, key: unknown) => {
 const getParent = (state: object, patch: Patch) =>
   getPath(patch).slice(0, -1).reduce<unknown>(read, state);
 
-/**
- * Leave out the value of a patch that sets an array element to `undefined`
- * where the array of the state is empty, as a patch without a value makes a
- * hole in an array.
- */
-const markHoles = (patches: Patches<true>, state: object): Patches<true> =>
-  patches.map((patch) => {
-    if (patch.op === 'remove' || patch.value !== undefined) return patch;
-    const parent = getParent(state, patch);
-    const index = patch.path[patch.path.length - 1];
-    return Array.isArray(parent) &&
-      typeof index === 'number' &&
-      index < parent.length &&
-      !(index in parent)
-      ? { op: patch.op, path: patch.path }
-      : patch;
-  });
-
 const getIndex = (patch: Patch<true>) => patch.path[patch.path.length - 1];
+
+/**
+ * Whether the patch sets an element of the array to `undefined` where the
+ * array of the state is empty.
+ */
+const isHole = (patch: Patch<true>, array: unknown): array is unknown[] => {
+  const index = getIndex(patch);
+  return (
+    patch.op !== 'remove' &&
+    patch.value === undefined &&
+    Array.isArray(array) &&
+    typeof index === 'number' &&
+    index < array.length &&
+    !(index in array)
+  );
+};
+
+/**
+ * Replace the consecutive patches that set the last elements of an array to
+ * `undefined`, where the array of the state is empty, with patches of its
+ * `length`, which leave those elements empty. A patch value cannot tell an
+ * empty element from `undefined`, so the other empty elements become
+ * `undefined`.
+ */
+const setHolesByLength = (patches: Patches<true>, state: object) => {
+  const result: Patches<true> = [];
+  for (let start = 0; start < patches.length; start += 1) {
+    const patch = patches[start];
+    const array = getParent(state, patch);
+    if (!isHole(patch, array)) {
+      result.push(patch);
+      continue;
+    }
+    let end = start;
+    while (
+      end + 1 < patches.length &&
+      getParent(state, patches[end + 1]) === array &&
+      isHole(patches[end + 1], array) &&
+      getIndex(patches[end + 1]) === Number(getIndex(patches[end])) + 1
+    ) {
+      end += 1;
+    }
+    const holes = patches.slice(start, end + 1);
+    const path = [...patch.path.slice(0, -1), 'length'];
+    const length = Number(getIndex(patches[end])) + 1;
+    if (holes.every(({ op }) => op === 'add')) {
+      // The patches append the elements.
+      result.push({ op: 'replace', path, value: length });
+    } else if (length === array.length) {
+      // Shorten the array before the first element, then lengthen it again.
+      result.push(
+        { op: 'replace', path, value: getIndex(patch) },
+        { op: 'replace', path, value: length }
+      );
+    } else {
+      result.push(...holes);
+    }
+    start = end;
+  }
+  return result;
+};
 
 /**
  * Order the consecutive patches that add items to the same Set by ascending
@@ -239,23 +282,15 @@ const applyInPlace = (state: object, allPatches: Patches) => {
   };
   for (let index = 0; index < patches.length; index += 1) {
     const patch = patches[index];
-    const isHole = patch.op !== 'remove' && !('value' in patch);
     let parent: unknown;
     // Only an `add` or a `remove` patch changes the items of a Set, which the
     // patch finds once the patches before it are applied.
-    if (patch.op === 'add' || patch.op === 'remove' || isHole) {
+    if (patch.op === 'add' || patch.op === 'remove') {
       applyPending();
       parent = getParent(state, patch);
     }
     if (!(parent instanceof Set)) {
       pending.push(patch);
-      if (isHole && Array.isArray(parent)) {
-        // apply() sets the element to `undefined`, which the hole replaces.
-        applyPending();
-        const path = getPath(patch);
-        const key = Number(path[path.length - 1]);
-        if (Number.isInteger(key)) delete parent[key];
-      }
     } else if (patch.op === 'remove') {
       removeItem(parent, patch);
     } else {
@@ -288,10 +323,12 @@ export const mutate = <T extends object>(
   const [nextState, patches, inversePatches] = create(baseState, recipe, {
     enablePatches: true,
   });
-  // A patch value cannot tell an empty array element from `undefined`.
-  const appliedPatches = sortSetItems(markHoles(patches, nextState), baseState);
+  const appliedPatches = sortSetItems(
+    setHolesByLength(patches, nextState),
+    baseState
+  );
   const appliedInversePatches = sortSetItems(
-    markHoles(inversePatches, baseState),
+    setHolesByLength(inversePatches, baseState),
     nextState
   );
   // A patch value holds objects of the next state, which shares the objects

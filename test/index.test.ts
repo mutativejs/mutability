@@ -424,19 +424,33 @@ describe('mutate - sparse arrays', () => {
     expect(Object.keys(baseState.list)).toEqual(['0']);
   });
 
-  test('inverse patches restore a hole that the recipe filled', () => {
+  test('patches set the length of an array to leave its last elements empty', () => {
+    const baseState = { list: [1, 2, 3] };
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      draft.list.length = 5;
+    });
+    expect(patches).toEqual([
+      { op: 'replace', path: ['list', 'length'], value: 5 },
+    ]);
+    apply(baseState, inversePatches);
+    apply(baseState, JSON.parse(JSON.stringify(patches)));
+    expect(baseState.list).toHaveLength(5);
+    expect(Object.keys(baseState.list)).toEqual(['0', '1', '2']);
+  });
+
+  test('inverse patches restore the empty elements at the end of an array', () => {
     const list = [1, 2, 3];
-    delete list[1];
+    list.length = 5;
     const baseState = { list };
     const { patches, inversePatches } = mutate(baseState, (draft) => {
-      draft.list[1] = 2;
+      draft.list.length = 1;
     });
-    expect(baseState.list).toStrictEqual([1, 2, 3]);
+    expect(baseState.list).toStrictEqual([1]);
     apply(baseState, inversePatches);
-    expect(baseState.list).toHaveLength(3);
-    expect(Object.keys(baseState.list)).toEqual(['0', '2']);
+    expect(baseState.list).toHaveLength(5);
+    expect(Object.keys(baseState.list)).toEqual(['0', '1', '2']);
     apply(baseState, patches);
-    expect(baseState.list).toStrictEqual([1, 2, 3]);
+    expect(baseState.list).toStrictEqual([1]);
   });
 
   test('patches keep an element that the recipe sets to undefined', () => {
@@ -446,7 +460,7 @@ describe('mutate - sparse arrays', () => {
     });
     expect(Object.keys(baseState.list)).toEqual(['0', '1', '2']);
     apply(baseState, inversePatches);
-    apply(baseState, patches);
+    apply(baseState, JSON.parse(JSON.stringify(patches)));
     expect(baseState.list).toStrictEqual([1, undefined, 3]);
   });
 });
