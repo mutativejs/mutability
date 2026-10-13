@@ -292,6 +292,52 @@ describe('mutate - Sets of objects', () => {
     expect(getNames(baseState.tags)).toEqual(['a', 'b', 'c']);
   });
 
+  test('inverse patches of several updates apply together', () => {
+    const baseState = {
+      tags: new Set<Tag>([{ name: 'a' }, { name: 'b' }, { name: 'c' }]),
+    };
+    const deleteTag = (name: string) =>
+      mutate(baseState, (draft) => {
+        for (const tag of draft.tags) {
+          if (tag.name === name) draft.tags.delete(tag);
+        }
+      });
+    const first = deleteTag('a');
+    const second = deleteTag('c');
+    expect(getNames(baseState.tags)).toEqual(['b']);
+    apply(baseState, [...second.inversePatches, ...first.inversePatches]);
+    expect(getNames(baseState.tags)).toEqual(['a', 'b', 'c']);
+    apply(baseState, [...first.patches, ...second.patches]);
+    expect(getNames(baseState.tags)).toEqual(['b']);
+  });
+
+  test('patches remove the equal item at their index', () => {
+    const baseState = {
+      items: new Set([{ n: 1 }, { n: 2 }, { n: 1 }, { n: 3 }]),
+    };
+    const getValues = () => Array.from(baseState.items, ({ n }) => n);
+    const { patches, inversePatches } = mutate(baseState, (draft) => {
+      draft.items.delete(Array.from(draft.items)[2]);
+    });
+    expect(getValues()).toEqual([1, 2, 3]);
+    apply(baseState, inversePatches);
+    expect(getValues()).toEqual([1, 2, 1, 3]);
+    apply(baseState, patches);
+    expect(getValues()).toEqual([1, 2, 3]);
+  });
+
+  test('inverse patches keep the objects that the Set held before', () => {
+    const tag = { name: 'a' };
+    const baseState = { tags: new Set<Tag>([tag]) };
+    const { inversePatches } = mutate(baseState, (draft) => {
+      draft.tags.add({ name: 'a' });
+    });
+    expect(getNames(baseState.tags)).toEqual(['a', 'a']);
+    apply(baseState, inversePatches);
+    expect(Array.from(baseState.tags)).toEqual([tag]);
+    expect(baseState.tags.has(tag)).toBe(true);
+  });
+
   test('a changed item keeps its position when the Set also adds an item', () => {
     const baseState = {
       workers: new Set([

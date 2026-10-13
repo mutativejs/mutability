@@ -121,42 +121,83 @@ const markHoles = (patches: Patches<true>, state: object): Patches<true> =>
       : patch;
   });
 
+const getIndex = (patch: Patch<true>) => patch.path[patch.path.length - 1];
+
 /**
- * Remove the item that is the value from the Set, or else the first item that
- * equals it, as the Set holds a copy of a value that a patch added.
+ * Order the consecutive patches that add items to the same Set by ascending
+ * index, and those that remove items from it by descending index, so that each
+ * patch finds its item at its index once the patches before it apply. Mutative
+ * lists the patches that remove items by ascending index, and the inverse
+ * patches that add them back by descending index.
  */
-const removeItem = (set: Set<unknown>, value: unknown) => {
-  if (set.delete(value)) return;
-  for (const item of set) {
-    if (isEqual(item, value)) {
-      set.delete(item);
-      return;
+const sortSetItems = (patches: Patches<true>, state: object) => {
+  const sortedPatches: Patches<true> = [];
+  let setPatches: Patches<true> = [];
+  let set: unknown;
+  let op: unknown;
+  const addSorted = () => {
+    const order = op === 'add' ? 1 : -1;
+    setPatches.sort(
+      (a, b) => order * (Number(getIndex(a)) - Number(getIndex(b)))
+    );
+    sortedPatches.push(...setPatches);
+    setPatches = [];
+  };
+  patches.forEach((patch) => {
+    const parent =
+      patch.op === 'add' || patch.op === 'remove'
+        ? getParent(state, patch)
+        : undefined;
+    if (parent !== set || patch.op !== op) addSorted();
+    set = parent instanceof Set ? parent : undefined;
+    op = patch.op;
+    if (set) {
+      setPatches.push(patch);
+    } else {
+      sortedPatches.push(patch);
     }
-  }
+  });
+  addSorted();
+  return sortedPatches;
 };
 
 /**
- * Add copies of the values of the patches to the Set at the indices of their
- * paths, which are the positions of the items once all of them are added.
+ * Remove the item of the Set at the index of the patch if it equals the value,
+ * as the Set holds a copy of a value that a patch added, or else the item that
+ * is the value, or else the first item that equals it.
+ */
+const removeItem = (set: Set<unknown>, patch: Patch) => {
+  const items = Array.from(set);
+  const path = getPath(patch);
+  const index = Number(path[path.length - 1]);
+  if (index in items && isEqual(items[index], patch.value)) {
+    set.delete(items[index]);
+    return;
+  }
+  if (set.delete(patch.value)) return;
+  const position = items.findIndex((item) => isEqual(item, patch.value));
+  if (position >= 0) set.delete(items[position]);
+};
+
+/**
+ * Add copies of the values of the patches to the Set, one after another, each
+ * at the index of its path, as a patch adds an array element.
  */
 const addItems = (set: Set<unknown>, patches: Patch[]) => {
   const items = Array.from(set);
   let isAppended = true;
-  patches
-    .map((patch) => {
-      const path = getPath(patch);
-      const index = Number(path[path.length - 1]);
-      return {
-        index: Number.isInteger(index) && index >= 0 ? index : Infinity,
-        value: copy(patch.value),
-      };
-    })
-    .sort((a, b) => a.index - b.index)
-    .forEach(({ index, value }) => {
-      if (items.includes(value)) return;
-      isAppended = isAppended && index >= items.length;
-      items.splice(Math.min(index, items.length), 0, value);
-    });
+  patches.forEach((patch) => {
+    const value = copy(patch.value);
+    if (items.includes(value)) return;
+    const path = getPath(patch);
+    const index = Number(path[path.length - 1]);
+    const position =
+      Number.isInteger(index) && index >= 0 && index < items.length
+        ? index
+        : items.length;
+    isAppended = isAppended && position === items.length;
+    items.splice(position, 0, value);
+  });
   if (isAppended) {
     items.slice(set.size).forEach((item) => set.add(item));
   } else {
@@ -207,9 +248,9 @@ const applyInPlace = (state: object, patches: Patches) => {
         if (Number.isInteger(key)) delete parent[key];
       }
     } else if (patch.op === 'remove') {
-      removeItem(parent, patch.value);
+      removeItem(parent, patch);
     } else {
-      // The inverse patches add the items of a Set by descending index.
+      // Add the items of consecutive patches together, to rebuild the Set once.
       const addPatches = [patch];
       while (
         index + 1 < patches.length &&
@@ -239,8 +280,11 @@ export const mutate = <T extends object>(
     enablePatches: true,
   });
   // A patch value cannot tell an empty array element from `undefined`.
-  const appliedPatches = markHoles(patches, nextState);
-  const appliedInversePatches = markHoles(inversePatches, baseState);
+  const appliedPatches = sortSetItems(markHoles(patches, nextState), baseState);
+  const appliedInversePatches = sortSetItems(
+    markHoles(inversePatches, baseState),
+    nextState
+  );
   // A patch value holds objects of the next state, which shares the objects
   // that the recipe did not change with the base state, and an inverse patch
   // value holds objects of the base state, which a patch of a nested draft
