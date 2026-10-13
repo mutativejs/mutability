@@ -9,14 +9,16 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
       # npm publishes with trusted publishing (OIDC) from npm 11.5.1, which
       # Node.js 24 includes, to its default registry and with provenance. A
       # registry-url would add a token setting to .npmrc that Yarn 1 cannot
       # read without NODE_AUTH_TOKEN.
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v7
         with:
           node-version: '24.x'
+          # A job that publishes does not restore a cache that other jobs wrote.
+          package-manager-cache: false
       - run: yarn
       - run: yarn build
       - run: yarn test
