@@ -45,7 +45,7 @@ test('base - mutate with error', () => {
       throw new Error('error');
       draft.b.c = 2;
     });
-  } catch (e) {
+  } catch {
     //
   }
   expect(baseState).toEqual({

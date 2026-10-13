@@ -8,6 +8,8 @@ import {
 
 const { hasOwnProperty, propertyIsEnumerable } = Object.prototype;
 
+type Entries = Record<PropertyKey, unknown>;
+
 /**
  * Copy a value deeply, as `apply()` copies a patch value before applying it.
  */
@@ -32,7 +34,7 @@ const getKeys = (value: object) =>
  * plain objects, arrays, Maps and Sets by their items, other values by
  * identity.
  */
-const isEqual = (value: any, other: any): boolean => {
+const isEqual = (value: unknown, other: unknown): boolean => {
   if (Object.is(value, other)) return true;
   if (!isDraftable(value) || !isDraftable(other)) return false;
   if (value instanceof Map) {
@@ -54,16 +56,19 @@ const isEqual = (value: any, other: any): boolean => {
     other instanceof Map ||
     other instanceof Set ||
     Array.isArray(value) !== Array.isArray(other) ||
-    (Array.isArray(value) && value.length !== other.length)
+    (Array.isArray(value) && value.length !== (other as unknown[]).length)
   ) {
     return false;
   }
-  const keys = getKeys(value);
+  const object = value as Entries;
+  const otherObject = other as Entries;
+  const keys = getKeys(object);
   return (
-    keys.length === getKeys(other).length &&
+    keys.length === getKeys(otherObject).length &&
     keys.every(
       (key) =>
-        hasOwnProperty.call(other, key) && isEqual(value[key], other[key])
+        hasOwnProperty.call(otherObject, key) &&
+        isEqual(object[key], otherObject[key])
     )
   );
 };
@@ -80,7 +85,7 @@ const getPath = ({ path }: Patch): unknown[] =>
  * Read the value at a key of a patch path, as `apply()` does. A key that
  * `apply()` may reject reads `undefined`, so that `apply()` handles the patch.
  */
-const read = (target: any, key: unknown) => {
+const read = (target: unknown, key: unknown) => {
   if (target instanceof Map) return target.get(key);
   const items = target instanceof Set ? Array.from(target) : target;
   return typeof items === 'object' &&
@@ -91,12 +96,12 @@ const read = (target: any, key: unknown) => {
     key !== '__proto__' &&
     key !== 'constructor' &&
     hasOwnProperty.call(items, key)
-    ? items[key]
+    ? (items as Entries)[key]
     : undefined;
 };
 
 const getParent = (state: object, patch: Patch) =>
-  getPath(patch).slice(0, -1).reduce(read, state);
+  getPath(patch).slice(0, -1).reduce<unknown>(read, state);
 
 /**
  * Leave out the value of a patch that sets an array element to `undefined`
