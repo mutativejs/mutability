@@ -94,7 +94,7 @@ test('base - mutate with error', () => {
 
 Mutate the mutable object with the recipe, and return the patches and inverse patches. If the recipe throws, the mutable object stays unchanged.
 
-The recipe changes the draft. It cannot return a new state, since `mutate()` changes the mutable object in place, and `mutate()` throws if it does. The values of the returned patches are copies, so later updates of the mutable object do not change them.
+The recipe changes the draft. It cannot return a new state, since `mutate()` changes the mutable object in place, and `mutate()` throws if it does. The values of the returned patches and inverse patches are copies, so later updates of the mutable object do not change them.
 
 ### `apply()`
 

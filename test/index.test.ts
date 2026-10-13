@@ -110,6 +110,25 @@ test('mutate - patches keep the unchanged values of a changed draft after later 
   });
 });
 
+test('mutate - inverse patches keep the values that nested patches change in place', () => {
+  const createList = () => [0, 1, 2].map((id) => ({ id, n: 0 }));
+  const baseState = { list: createList() };
+  const { patches, inversePatches } = mutate(baseState, (draft) => {
+    draft.list[1].n = 1;
+    draft.list.reverse();
+  });
+  const nextList = [
+    { id: 2, n: 0 },
+    { id: 1, n: 1 },
+    { id: 0, n: 0 },
+  ];
+  expect(baseState.list).toEqual(nextList);
+  apply(baseState, inversePatches);
+  expect(baseState.list).toEqual(createList());
+  apply(baseState, patches);
+  expect(baseState.list).toEqual(nextList);
+});
+
 test('mutate - a recipe that returns a new state throws', () => {
   // Development builds of Mutative also suggest rawReturn() for the new state.
   const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);

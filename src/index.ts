@@ -9,11 +9,18 @@ const copy = <T>(value: T): T => {
   return target.value as T;
 };
 
+const copyValues = (patches: Patches<true>): Patches<true> =>
+  patches.map((patch) =>
+    typeof patch.value === 'object' && patch.value !== null
+      ? { ...patch, value: copy(patch.value) }
+      : patch
+  );
+
 /**
  * Transactional updates to the base state with the recipe.
  *
- * Return the patches of the update, whose values are copies, and the inverse
- * patches that undo it. If the recipe throws, the base state stays unchanged.
+ * Return the patches of the update and the inverse patches that undo it, whose
+ * values are copies. If the recipe throws, the base state stays unchanged.
  */
 export const mutate = <T extends object>(
   baseState: T,
@@ -22,18 +29,17 @@ export const mutate = <T extends object>(
   const [, appliedPatches, inversePatches] = create(baseState, recipe, {
     enablePatches: true,
   });
-  // A patch value holds the objects of the next state, which shares the
-  // objects that the recipe did not change with the base state. Return copies,
-  // so that later updates of the base state in place do not change the patches.
-  // The inverse patches hold the values that the patches replace or remove,
-  // which leave the base state.
-  const patches: Patches<true> = appliedPatches.map((patch) =>
-    typeof patch.value === 'object' && patch.value !== null
-      ? { ...patch, value: copy(patch.value) }
-      : patch
-  );
+  // A patch value holds objects of the next state, which shares the objects
+  // that the recipe did not change with the base state, and an inverse patch
+  // value holds objects of the base state, which a patch of a nested draft
+  // changes in place before a patch of its parent replaces them. Return
+  // copies, so that no update of the base state in place changes the patches.
+  const result = {
+    inversePatches: copyValues(inversePatches),
+    patches: copyValues(appliedPatches),
+  };
   baseApply(baseState, appliedPatches, { mutable: true });
-  return { inversePatches, patches };
+  return result;
 };
 
 /**
