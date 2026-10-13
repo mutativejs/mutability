@@ -8,13 +8,15 @@
 [![npm version](https://badge.fury.io/js/mutability.svg)](http://badge.fury.io/js/mutability)
 ![license](https://img.shields.io/npm/l/mutability)
 
-A JavaScript library for transactional mutable updates.
+A JavaScript library for transactional mutable updates based on [Mutative](https://github.com/unadlib/mutative).
 
 ## Motivation
 
 When we want to perform transactional updates on a mutable object, if an error is caught during the update process, the mutable update will not be applied at all. Otherwise, the mutable update will be applied to the mutable object. Therefore, we need a tool to implement this functionality.
 
 ## Installation
+
+Mutability requires [Mutative](https://github.com/unadlib/mutative) 2 as a peer dependency.
 
 ```sh
 yarn add mutative mutability
@@ -29,7 +31,7 @@ npm install mutative mutability
 ## Usage
 
 ```ts
-import { mutate } from 'mutability';
+import { mutate, apply } from 'mutability';
 
 test('base - mutate', () => {
   const baseState = {
@@ -37,10 +39,28 @@ test('base - mutate', () => {
       c: 1,
     },
   };
-  mutate(baseState, (draft) => {
+  const { patches, inversePatches } = mutate(baseState, (draft) => {
     draft.a.c = 2;
   });
   expect(baseState).toEqual({ a: { c: 2 } });
+  expect({ patches, inversePatches }).toEqual({
+    patches: [
+      {
+        op: 'replace',
+        path: ['a', 'c'],
+        value: 2,
+      },
+    ],
+    inversePatches: [
+      {
+        op: 'replace',
+        path: ['a', 'c'],
+        value: 1,
+      },
+    ],
+  });
+  apply(baseState, inversePatches);
+  expect(baseState).toEqual({ a: { c: 1 } });
 });
 
 test('base - mutate with error', () => {
@@ -71,6 +91,33 @@ test('base - mutate with error', () => {
   });
 });
 ```
+
+## APIs
+
+### `mutate()`
+
+Mutate the mutable object with the recipe, and return the patches and inverse patches. If the recipe throws, the mutable object stays unchanged.
+
+The recipe changes the draft. It cannot return a new state, since `mutate()` changes the mutable object in place, and `mutate()` throws if it does. The values of the returned patches are copies, so later updates of the mutable object do not change them.
+
+### `apply()`
+
+Apply the patches to the mutable object in place, for example the inverse patches that `mutate()` returned, to undo its update. It throws for a patch that replaces the root state.
+
+## Notes
+
+- `apply()` copies the patch values that it adds to the mutable object, also when `mutate()` applies them. So an object that the recipe moves, for example with `sort()`, is a copy in the mutable object.
+- `apply()` removes an item from a Set by identity, so inverse patches cannot remove an object that a patch added to a Set, as the Set holds a copy of it. To undo such updates, use a Map keyed by an id, or an array.
+
+## Upgrading to Mutative 2
+
+Mutability 2 depends on Mutative 2. The [migration guide of Mutative](https://mutative.js.org/docs/advanced-guides/migration-v2) lists all of its changes; with Mutability, expect these:
+
+- The patches of a nested draft come before those of its parents, as in Immer, so tests that pin patches may need updates. Applying them gives the same state.
+- A recipe that returns a new state throws, and so does `apply()` for a patch that replaces the root state. Both leave the mutable object unchanged; Mutability 1 ignored the new state.
+- `mutate()` applies changes below an object key of a Map, and changes between `0` and `-0` in an array, which Mutability 1 failed to apply.
+- Production builds of Mutative throw `Minified Mutative error #<code>` instead of the full message, so run your tests with `NODE_ENV=production` too.
+- Development builds of Mutative check recipes more strictly. For example, passing a draft as a key to the `set()` method of a Map draft throws, and the value and entry iterators of a Map draft, and the iterators of a Set draft, throw once `mutate()` returns.
 
 ## License
 

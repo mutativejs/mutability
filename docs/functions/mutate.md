@@ -6,13 +6,16 @@
 
 # Function: mutate()
 
-> **mutate**\<`T`\>(`baseState`, `recipe`): `void`
+> **mutate**\<`T`\>(`baseState`, `recipe`): `object`
 
 Transactional updates to the base state with the recipe.
 
-## Type parameters
+Return the patches of the update, whose values are copies, and the inverse
+patches that undo it. If the recipe throws, the base state stays unchanged.
 
-• **T**
+## Type Parameters
+
+• **T** *extends* `object`
 
 ## Parameters
 
@@ -22,8 +25,16 @@ Transactional updates to the base state with the recipe.
 
 ## Returns
 
-`void`
+`object`
 
-## Source
+### inversePatches
 
-[index.ts:7](https://github.com/mutativejs/mutability/blob/7716adccba23dd12347de1acf2bcc25ee5a2c9a6/src/index.ts#L7)
+> **inversePatches**: `Patches`\<`true`\>
+
+### patches
+
+> **patches**: `Patches`\<`true`\>
+
+## Defined in
+
+[index.ts:18](https://github.com/mutativejs/mutability/blob/9e0db430b659d638454d747046775e54adfa4f39/src/index.ts#L18)
