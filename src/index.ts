@@ -104,8 +104,14 @@ const read = (target: unknown, key: unknown) => {
     : undefined;
 };
 
+const getParentKeys = (patch: Patch) => getPath(patch).slice(0, -1);
+
+const isSameKeys = (keys: unknown[], otherKeys: unknown[]) =>
+  keys.length === otherKeys.length &&
+  keys.every((key, index) => Object.is(key, otherKeys[index]));
+
 const getParent = (state: object, patch: Patch) =>
-  getPath(patch).slice(0, -1).reduce<unknown>(read, state);
+  getParentKeys(patch).reduce<unknown>(read, state);
 
 const getIndex = (patch: Patch<true>) => patch.path[patch.path.length - 1];
 
@@ -209,21 +215,28 @@ const sortSetItems = (patches: Patches<true>, state: object) => {
 };
 
 /**
- * Remove the item of the Set at the index of the patch if it equals the value,
- * as the Set holds a copy of a value that a patch added, or else the item that
- * is the value, or else the first item that equals it.
+ * Remove items from the Set, one patch after another: the item at the index of
+ * the patch if it equals the value, as the Set holds a copy of a value that a
+ * patch added, or else the item that is the value, or else the first item that
+ * equals it.
  */
-const removeItem = (set: Set<unknown>, patch: Patch) => {
+const removeItems = (set: Set<unknown>, patches: Patch[]) => {
   const items = Array.from(set);
-  const path = getPath(patch);
-  const index = Number(path[path.length - 1]);
-  if (index in items && isEqual(items[index], patch.value)) {
-    set.delete(items[index]);
-    return;
-  }
-  if (set.delete(patch.value)) return;
-  const position = items.findIndex((item) => isEqual(item, patch.value));
-  if (position >= 0) set.delete(items[position]);
+  patches.forEach((patch) => {
+    const { value } = patch;
+    const path = getPath(patch);
+    const index = Number(path[path.length - 1]);
+    let position =
+      index in items && isEqual(items[index], value)
+        ? index
+        : items.indexOf(value);
+    if (position < 0) {
+      position = items.findIndex((item) => isEqual(item, value));
+    }
+    if (position < 0) return;
+    set.delete(items[position]);
+    items.splice(position, 1);
+  });
 };
 
 /**
@@ -280,31 +293,44 @@ const applyInPlace = (state: object, allPatches: Patches) => {
     baseApply(state, pending, { mutable: true });
     pending = [];
   };
+  // The parent of the last `add` or `remove` patch and the keys of the path to
+  // it, which the patches that add or remove its elements leave as they are.
+  let parent: unknown;
+  let parentKeys: unknown[] | undefined;
   for (let index = 0; index < patches.length; index += 1) {
     const patch = patches[index];
-    let parent: unknown;
+    if (patch.op !== 'add' && patch.op !== 'remove') {
+      pending.push(patch);
+      parentKeys = undefined;
+      continue;
+    }
     // Only an `add` or a `remove` patch changes the items of a Set, which the
     // patch finds once the patches before it are applied.
-    if (patch.op === 'add' || patch.op === 'remove') {
+    const keys = getParentKeys(patch);
+    if (!parentKeys || !isSameKeys(keys, parentKeys)) {
       applyPending();
-      parent = getParent(state, patch);
+      parent = keys.reduce<unknown>(read, state);
+      parentKeys = keys;
     }
     if (!(parent instanceof Set)) {
       pending.push(patch);
-    } else if (patch.op === 'remove') {
-      removeItem(parent, patch);
+      continue;
+    }
+    // Apply the consecutive patches that add or remove items of the Set
+    // together, to read its items once.
+    const setPatches = [patch];
+    while (
+      index + 1 < patches.length &&
+      patches[index + 1].op === patch.op &&
+      isSameKeys(getParentKeys(patches[index + 1]), keys)
+    ) {
+      index += 1;
+      setPatches.push(patches[index]);
+    }
+    if (patch.op === 'add') {
+      addItems(parent, setPatches);
     } else {
-      // Add the items of consecutive patches together, to rebuild the Set once.
-      const addPatches = [patch];
-      while (
-        index + 1 < patches.length &&
-        patches[index + 1].op === 'add' &&
-        getParent(state, patches[index + 1]) === parent
-      ) {
-        index += 1;
-        addPatches.push(patches[index]);
-      }
-      addItems(parent, addPatches);
+      removeItems(parent, setPatches);
     }
   }
   applyPending();
