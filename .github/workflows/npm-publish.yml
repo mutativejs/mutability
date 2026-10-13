@@ -1,7 +1,8 @@
 name: Publish Package to npmjs
 on:
   release:
-    types: [created]
+    # Also a release published from a draft, for which `created` does not run.
+    types: [published]
 jobs:
   publish-npm:
     runs-on: ubuntu-latest
