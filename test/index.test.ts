@@ -109,3 +109,23 @@ test('mutate - patches keep the unchanged values of a changed draft after later 
     value: { done: true, tags: ['a'] },
   });
 });
+
+test('mutate - a recipe that returns a new state throws', () => {
+  // Development builds of Mutative also suggest rawReturn() for the new state.
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const baseState = { a: { c: 1 } };
+  expect(() => mutate(baseState, () => ({ a: { c: 2 } }))).toThrow();
+  expect(baseState).toEqual({ a: { c: 1 } });
+  warn.mockRestore();
+});
+
+test('apply - a patch that replaces the root state throws', () => {
+  const baseState = { a: { c: 1 } };
+  expect(() =>
+    apply(baseState, [
+      { op: 'replace', path: [], value: { a: { c: 2 } } },
+      { op: 'replace', path: ['a', 'c'], value: 3 },
+    ])
+  ).toThrow();
+  expect(baseState).toEqual({ a: { c: 1 } });
+});
