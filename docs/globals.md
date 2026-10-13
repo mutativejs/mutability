@@ -1,4 +1,4 @@
-[**mutability**](README.md) • **Docs**
+[**mutability**](README.md)
 
 ***
 

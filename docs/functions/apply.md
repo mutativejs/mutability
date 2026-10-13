@@ -1,4 +1,4 @@
-[**mutability**](../README.md) • **Docs**
+[**mutability**](../README.md)
 
 ***
 
@@ -8,22 +8,26 @@
 
 > **apply**\<`T`\>(`baseState`, `patches`): `void`
 
+Defined in: [index.ts:260](https://github.com/mutativejs/mutability/blob/f75d5b5cf31fb8b1b5f9ec570cc350fe2ecee9a0/src/index.ts#L260)
+
 Apply the patches to the base state in place.
 
 ## Type Parameters
 
-• **T** *extends* `object`
+### T
+
+`T` *extends* `object`
 
 ## Parameters
 
-• **baseState**: `T`
+### baseState
 
-• **patches**: `Patches`
+`T`
+
+### patches
+
+`Patches`
 
 ## Returns
 
 `void`
-
-## Defined in
-
-[index.ts:42](https://github.com/mutativejs/mutability/blob/9e0db430b659d638454d747046775e54adfa4f39/src/index.ts#L42)

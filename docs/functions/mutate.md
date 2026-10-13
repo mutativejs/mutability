@@ -1,4 +1,4 @@
-[**mutability**](../README.md) • **Docs**
+[**mutability**](../README.md)
 
 ***
 
@@ -8,20 +8,28 @@
 
 > **mutate**\<`T`\>(`baseState`, `recipe`): `object`
 
+Defined in: [index.ts:234](https://github.com/mutativejs/mutability/blob/f75d5b5cf31fb8b1b5f9ec570cc350fe2ecee9a0/src/index.ts#L234)
+
 Transactional updates to the base state with the recipe.
 
-Return the patches of the update, whose values are copies, and the inverse
-patches that undo it. If the recipe throws, the base state stays unchanged.
+Return the patches of the update and the inverse patches that undo it, whose
+values are copies. If the recipe throws, the base state stays unchanged.
 
 ## Type Parameters
 
-• **T** *extends* `object`
+### T
+
+`T` *extends* `object`
 
 ## Parameters
 
-• **baseState**: `T`
+### baseState
 
-• **recipe**
+`T`
+
+### recipe
+
+(`state`) => `void`
 
 ## Returns
 
@@ -34,7 +42,3 @@ patches that undo it. If the recipe throws, the base state stays unchanged.
 ### patches
 
 > **patches**: `Patches`\<`true`\>
-
-## Defined in
-
-[index.ts:18](https://github.com/mutativejs/mutability/blob/9e0db430b659d638454d747046775e54adfa4f39/src/index.ts#L18)
