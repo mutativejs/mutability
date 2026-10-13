@@ -8,7 +8,7 @@
 
 > **apply**\<`T`\>(`baseState`, `patches`): `void`
 
-Defined in: [index.ts:260](https://github.com/mutativejs/mutability/blob/f75d5b5cf31fb8b1b5f9ec570cc350fe2ecee9a0/src/index.ts#L260)
+Defined in: [index.ts:380](https://github.com/mutativejs/mutability/blob/1dab54657e9696828995505f9372d5ce96786ed4/src/index.ts#L380)
 
 Apply the patches to the base state in place.
 

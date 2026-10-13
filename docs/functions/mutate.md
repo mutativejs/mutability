@@ -8,7 +8,7 @@
 
 > **mutate**\<`T`\>(`baseState`, `recipe`): `object`
 
-Defined in: [index.ts:234](https://github.com/mutativejs/mutability/blob/f75d5b5cf31fb8b1b5f9ec570cc350fe2ecee9a0/src/index.ts#L234)
+Defined in: [index.ts:349](https://github.com/mutativejs/mutability/blob/1dab54657e9696828995505f9372d5ce96786ed4/src/index.ts#L349)
 
 Transactional updates to the base state with the recipe.
 
