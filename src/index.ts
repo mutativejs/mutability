@@ -142,7 +142,11 @@ const setHolesByLength = (patches: Patches<true>, state: object) => {
   const result: Patches<true> = [];
   for (let start = 0; start < patches.length; start += 1) {
     const patch = patches[start];
-    const array = getParent(state, patch);
+    // Only a patch whose value is `undefined` may set an empty element.
+    const array =
+      patch.op !== 'remove' && patch.value === undefined
+        ? getParent(state, patch)
+        : undefined;
     if (!isHole(patch, array)) {
       result.push(patch);
       continue;
@@ -150,9 +154,9 @@ const setHolesByLength = (patches: Patches<true>, state: object) => {
     let end = start;
     while (
       end + 1 < patches.length &&
-      getParent(state, patches[end + 1]) === array &&
       isHole(patches[end + 1], array) &&
-      getIndex(patches[end + 1]) === Number(getIndex(patches[end])) + 1
+      getIndex(patches[end + 1]) === Number(getIndex(patches[end])) + 1 &&
+      getParent(state, patches[end + 1]) === array
     ) {
       end += 1;
     }
